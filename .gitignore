@@ -1,0 +1,22 @@
+# Latex
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+*.short.tex
+**/.out
+
+# CMake
+**/build
+**/build-linux
+**/.build
+**/.build-linux
+
+# Visual Studio 
+**/.vs
+
+# Ignore exe
+**/cache
+*.pptx
+*.pdf

@@ -16,6 +16,9 @@ target_sources(project
 
     Shader.h
     Shader.cpp
+
+    SceneGraph.h
+    SceneGraph.cpp
 )
 target_link_libraries(project
     PRIVATE

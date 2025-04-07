@@ -10,6 +10,12 @@ target_sources(project
     PRIVATE
 
     main.cpp
+
+    Mesh.h
+    Mesh.cpp
+
+    Shader.h
+    Shader.cpp
 )
 target_link_libraries(project
     PRIVATE
@@ -17,4 +23,5 @@ target_link_libraries(project
     glfw
     glm::glm
     imgui
+    tinygltf
 )

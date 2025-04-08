@@ -64,3 +64,12 @@ The safest route is a linux or windows dual boot. Alternatively the Apple Silico
 
 ### Why OpenGL if Mac dose not support if fully?
 Linux and Windows support it. And the only cross platform option is Vulkan which is out of scope for an entry level Computer Graphics course.
+
+
+
+
+
+
+
+
+Dokumentation:

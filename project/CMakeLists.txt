@@ -19,6 +19,9 @@ target_sources(project
 
     SceneGraph.h
     SceneGraph.cpp
+
+    Camera.h
+    Camera.cpp
 )
 target_link_libraries(project
     PRIVATE

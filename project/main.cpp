@@ -1,74 +1,127 @@
 ﻿#include <iostream>
-
+#include <vector>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <imgui.h>
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    glViewport(0, 0, width, height);
-}
+#include <backends/imgui_impl_opengl3.h>
+#include <backends/imgui_impl_glfw.h>
 
-// Zustand für Polygonmodus
-bool isFilled = true;
+// Globale Variablen
+bool isWireframe = false;
+glm::vec3 lightDirection(0.0f, -1.0f, -1.0f);
 
-// Maus-Callback für Linksklick
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
-{
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
-    {
-        isFilled = !isFilled;
-        glPolygonMode(GL_FRONT_AND_BACK, isFilled ? GL_FILL : GL_LINE);
-    }
-}
-
-// Shader
+// Shader mit Phong Shading
 const char* vertexShaderSource = R"glsl(
     #version 330 core
     layout (location = 0) in vec3 aPos;
+    layout (location = 1) in vec3 aNormal;
+
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 projection;
+
+    out vec3 FragPos;
+    out vec3 Normal;
+
     void main()
     {
-        gl_Position = vec4(aPos, 1.0);
+        FragPos = vec3(model * vec4(aPos, 1.0));
+        Normal = mat3(transpose(inverse(model))) * aNormal;
+        gl_Position = projection * view * vec4(FragPos, 1.0);
     }
 )glsl";
 
 const char* fragmentShaderSource = R"glsl(
     #version 330 core
+    in vec3 FragPos;
+    in vec3 Normal;
+
+    uniform vec3 lightDir;
+    uniform vec3 objectColor;
+
     out vec4 FragColor;
+
     void main()
     {
-        FragColor = vec4(1.0f, 0.5f, 0.0f, 1.0f); // Orange
+        // Ambient
+        float ambientStrength = 0.1;
+        vec3 ambient = ambientStrength * objectColor;
+
+        // Diffuse
+        vec3 norm = normalize(Normal);
+        float diff = max(dot(norm, -lightDir), 0.0);
+        vec3 diffuse = diff * objectColor;
+
+        // Specular
+        float specularStrength = 0.5;
+        vec3 viewDir = normalize(-FragPos);
+        vec3 reflectDir = reflect(lightDir, norm);
+        float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
+        vec3 specular = specularStrength * spec * vec3(1.0);
+
+        vec3 result = ambient + diffuse + specular;
+        FragColor = vec4(result, 1.0);
     }
 )glsl";
 
-int main()
-{
-    // Init
-    glfwInit();
+// Funktionen für ImGui
+void setupImGui(GLFWwindow* window) {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+}
+
+void renderImGui() {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("Settings");
+    ImGui::Text("Global Light Direction");
+    ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightDirection), -1.0f, 1.0f);
+    if (ImGui::Button("Reset Camera")) {
+        // Reset Camera
+    }
+    ImGui::Checkbox("Wireframe Mode", &isWireframe);
+    ImGui::End();
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+// Hauptprogramm
+int main() {
+    // Initialisierung von GLFW
+    if (!glfwInit()) {
+        std::cerr << "Failed to initialize GLFW\n";
+        return -1;
+    }
+
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Toggle Fill with Click", NULL, NULL);
-    if (window == NULL)
-    {
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Rasterization Pipeline", NULL, NULL);
+    if (!window) {
         std::cerr << "Failed to create GLFW window\n";
         glfwTerminate();
         return -1;
     }
     glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetMouseButtonCallback(window, mouse_button_callback); // Maus-Callback setzen
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cerr << "Failed to initialize GLAD\n";
         return -1;
     }
 
-    // Shader Setup
+    glEnable(GL_DEPTH_TEST);
+
+    // Shader-Setup
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
@@ -85,58 +138,33 @@ int main()
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-    // Rechteck
-    float vertices[] = {
-         0.5f,  0.5f, 0.0f, // oben rechts
-         0.5f, -0.5f, 0.0f, // unten rechts
-        -0.5f, -0.5f, 0.0f, // unten links
-        -0.5f,  0.5f, 0.0f  // oben links
-    };
+    // ImGui-Setup
+    setupImGui(window);
 
-    unsigned int indices[] = {
-        0, 1, 3,
-        1, 2, 3
-    };
+    // Render-Loop
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
 
-    unsigned int VBO, VAO, EBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    // Render Loop
-    while (!glfwWindowShouldClose(window))
-    {
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-            glfwSetWindowShouldClose(window, true);
+        // Wireframe-Modus umschalten
+        glPolygonMode(GL_FRONT_AND_BACK, isWireframe ? GL_LINE : GL_FILL);
 
         glClearColor(0.2f, 0.2f, 0.25f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(shaderProgram);
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glUniform3fv(glGetUniformLocation(shaderProgram, "lightDir"), 1, glm::value_ptr(lightDirection));
+
+        // ImGui rendern
+        renderImGui();
 
         glfwSwapBuffers(window);
-        glfwPollEvents();
     }
 
     // Cleanup
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
-    glDeleteProgram(shaderProgram);
-
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
     glfwTerminate();
+
     return 0;
 }

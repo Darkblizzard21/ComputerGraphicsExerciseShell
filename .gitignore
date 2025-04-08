@@ -19,4 +19,4 @@
 # Ignore exe
 **/cache
 *.pptx
-*.pdf
+#*.pdf

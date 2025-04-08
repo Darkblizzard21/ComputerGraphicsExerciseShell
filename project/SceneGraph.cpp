@@ -27,7 +27,7 @@ void Entity::addChild(const std::vector<std::shared_ptr<Mesh>> meshes)
     // set parent pointer of child to this
 }
 
-void Entity::addChild(std::unique_ptr<Entity>&& child)
+void Entity::addChild(std::shared_ptr<Entity> child)
 {
     // move entity to children
     // set parent pointer of child to this

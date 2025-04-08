@@ -26,7 +26,7 @@ public:
     glm::mat4 modelMatrix = glm::mat4(1.0f);
 
     Entity*                              parent   = nullptr;
-    std::vector<std::unique_ptr<Entity>> children = {};
+    std::vector<std::shared_ptr<Entity>> children = {};
 
     std::vector<std::shared_ptr<Mesh>> meshes = {};
 
@@ -38,7 +38,7 @@ public:
     // add new child with std::make_unique and set this as parent
     void addChild(const std::vector<std::shared_ptr<Mesh>> meshes = {});
     // add new child which is moved into this entity
-    void addChild(std::unique_ptr<Entity>&& child);
+    void addChild(std::shared_ptr<Entity> child);
 
     // Calls update frame on this entity and all its children 
     // (parent first to update then depth first for the children)

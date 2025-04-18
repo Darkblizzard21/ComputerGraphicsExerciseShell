@@ -31,10 +31,11 @@ void SceneNode::draw(const glm::mat4& parentTransform, unsigned int shaderID) {
     glm::mat4 globalTransform = parentTransform * transform;
 
     if (model) {
-        model->Draw(shaderID, globalTransform);
+        model->draw(shaderID, globalTransform);
     }
 
     for (auto& child : children) {
         child->draw(globalTransform, shaderID);
     }
 }
+

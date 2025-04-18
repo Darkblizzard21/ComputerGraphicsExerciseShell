@@ -18,14 +18,14 @@ add_custom_command(TARGET OpenGLViewer POST_BUILD
 
 # Include‑Verzeichnisse
 target_include_directories(OpenGLViewer PRIVATE
-    ${CMAKE_SOURCE_DIR}/core
-    ${CMAKE_SOURCE_DIR}/render
-    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_SOURCE_DIR}/project/core
+    ${CMAKE_SOURCE_DIR}/project/render
+    ${CMAKE_SOURCE_DIR}/project/shaders
 
     ${CMAKE_SOURCE_DIR}/imported/glad/include
     ${CMAKE_SOURCE_DIR}/imported/glfw/include
-    ${CMAKE_SOURCE_DIR}/imported/imgui        
-    ${CMAKE_SOURCE_DIR}/imported/stb          
+    ${CMAKE_SOURCE_DIR}/imported/tinygltf/include      
+    ${CMAKE_SOURCE_DIR}/imported/stbi/include       
     ${CMAKE_SOURCE_DIR}/imported/assimp/include
 )
 

@@ -1,48 +1,140 @@
-﻿#include <iostream>
+﻿// OpenGL 3D Viewer - SceneNode + Planet
 
+#include "Camera.h"
+#include "Model.h"
+#include "Shader.h"
+#include "SceneNode.h"
 
-#include <glad/glad.h> 
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
+#include <iostream>
+#include <memory>
 
-// frame buffer size callbak is needed to resize the window
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    // update glViewport to new window size
+// Globale Settings
+bool isWireframe = false;
+glm::vec3 lightDirection(0.0f, -1.0f, -1.0f);
+
+// Fenster-Callback
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
 }
 
-int main()
-{
-    std::cout << "Hello Graphics!" << std::endl;
+// ImGui Setup
+void setupImGui(GLFWwindow* window) {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330 core");
+}
 
-    // Init GLFW Library and set opengl version and extension hints
+// ImGui Rendering
+void renderImGui() {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
 
-    // Create a Window  
-    
-    // Handle Window creation failure
+    ImGui::Begin("Settings");
+    ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightDirection), -1.0f, 1.0f);
+    ImGui::Checkbox("Wireframe Mode", &isWireframe);
+    ImGui::End();
 
-    // set newly created window to current window in glfw context
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
 
-    // use glad to load opengl function pointers
+int main() {
+    // GLFW init
+    if (!glfwInit()) {
+        std::cerr << "GLFW init failed" << std::endl;
+        return -1;
+    }
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // set open gl view port 
-    // 
-    // set up resize callback
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Planet Viewer", nullptr, nullptr);
+    if (!window) {
+        std::cerr << "Window creation failed" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+    glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-    // render loop
-    while (true)
-    {
-        // if esc is pressed - exit application
+    // GLAD init
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        std::cerr << "GLAD init failed" << std::endl;
+        return -1;
+    }
+    glEnable(GL_DEPTH_TEST);
+    setupImGui(window);
 
-        // set clear framebuffer with abitrary color 
-        // first set clear color and then clear color buffer
+    // Kamera
+    Camera camera(window);
 
+    // Shader für Modelle
+    Shader modelShader("shaders/model.vert", "shaders/model.frag");
 
-        // swap buffers to present the rendered image
+    // Root Scene Node
+    auto rootNode = std::make_shared<SceneNode>();
 
-        // pool events to recive updates such as key down event or resizes
+    // Planet Node erstellen
+    auto planetModel = std::make_shared<Model>("assets/models/crystal_planet/crystal_planet.glb");
+    auto planetNode = std::make_shared<SceneNode>();
+    planetNode->setModel(planetModel);
+    planetNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
+    planetNode->rotationSpeed = 20.0f; // Grad pro Sekunde
+    rootNode->addChild(planetNode);
+
+    // Timing für Animation
+    float lastFrame = static_cast<float>(glfwGetTime());
+
+    // Render-Loop
+    while (!glfwWindowShouldClose(window)) {
+        float currentFrame = static_cast<float>(glfwGetTime());
+        float deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
+        glfwPollEvents();
+        camera.update();
+
+        // Kamera-Matrizen
+        glm::mat4 view = camera.getViewMatrix();
+        glm::mat4 projection = camera.getProjectionMatrix(800.0f / 600.0f);
+
+        // Clear Frame
+        glPolygonMode(GL_FRONT_AND_BACK, isWireframe ? GL_LINE : GL_FILL);
+        glClearColor(0.1f, 0.1f, 0.12f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // Shader Setup
+        modelShader.use();
+        modelShader.setVec3("lightDir", lightDirection);
+        modelShader.setVec3("lightColor", glm::vec3(1.0f));
+        modelShader.setVec3("viewPos", camera.getPosition());
+        modelShader.setMat4("view", view);
+        modelShader.setMat4("projection", projection);
+
+        // Update & Draw Scene
+        rootNode->update(deltaTime);
+        rootNode->draw(glm::mat4(1.0f), modelShader.ID);
+
+        // ImGui
+        renderImGui();
+        glfwSwapBuffers(window);
     }
 
-    // terminate glfw to enshure clean shutdown
-
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    glfwDestroyWindow(window);
+    glfwTerminate();
     return 0;
 }

@@ -89,7 +89,7 @@ int main() {
     auto planetNode = std::make_shared<SceneNode>();
     planetNode->setModel(planetModel);
     planetNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
-    planetNode->rotationSpeed = 20.0f; // Grad pro Sekunde
+    planetNode->setRotationSpeed(20.0f); // Grad pro Sekunde
     rootNode->addChild(planetNode);
 
     // Timing für Animation

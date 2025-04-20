@@ -13,6 +13,7 @@ public:
     glm::mat4 getProjectionMatrix(float aspectRatio) const;
 
     void reset();
+    glm::vec3 getPosition() const; // aktuelle Welt-position
 
 private:
     GLFWwindow* window;
@@ -24,7 +25,6 @@ private:
     bool firstMouse = true;
     bool leftMousePressed = false;
 
-    glm::vec3 position;
     glm::vec3 target = glm::vec3(0.0f);
     glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 

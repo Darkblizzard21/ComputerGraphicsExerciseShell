@@ -71,3 +71,16 @@ void Camera::processMouseInput() {
 void Camera::processScrollInput() {
     // Implementierbar via Scroll-Callback – kann optional ergänzt werden
 }
+
+// Neuer Getter f r die berechnete Kamera-Position
+glm::vec3 Camera::getPosition() const {
+    float radYaw = glm::radians(yaw);
+    float radPitch = glm::radians(pitch);
+
+    glm::vec3 dir;
+    dir.x = cos(radYaw) * cos(radPitch);
+    dir.y = sin(radPitch);
+    dir.z = sin(radYaw) * cos(radPitch);
+
+    return target - dir * distance;
+}

@@ -1,10 +1,5 @@
 ﻿// OpenGL 3D Viewer - SceneNode + Planet
 
-#include "Camera.h"
-#include "Model.h"
-#include "Shader.h"
-#include "SceneNode.h"
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -15,6 +10,11 @@
 #include <backends/imgui_impl_opengl3.h>
 #include <iostream>
 #include <memory>
+
+#include "Camera.h"
+#include "Model.h"
+#include "Shader.h"
+#include "SceneNode.h"
 
 // Globale Settings
 bool isWireframe = false;

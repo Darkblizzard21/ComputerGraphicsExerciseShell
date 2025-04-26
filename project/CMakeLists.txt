@@ -36,10 +36,11 @@ target_include_directories(project
 
 target_link_libraries(project
     PRIVATE
-    #glad
+    glad
     glfw
     glm::glm
     imgui
     tinygltf
+    stbi
 )
 

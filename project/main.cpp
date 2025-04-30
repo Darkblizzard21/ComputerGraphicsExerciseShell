@@ -11,10 +11,10 @@
 #include <iostream>
 #include <memory>
 
-#include "Camera.h"
-#include "Model.h"
-#include "Shader.h"
-#include "SceneNode.h"
+#include "core/Camera.h"
+#include "render/Model.h"
+#include "render/Shader.h"
+#include "core/SceneNode.h"
 
 // Globale Settings
 bool isWireframe = false;
@@ -81,6 +81,7 @@ int main() {
     // Shader für Modelle
     Shader modelShader("shaders/model.vert", "shaders/model.frag");
 
+    // Root Scene Node
     // Root Scene Node
     auto rootNode = std::make_shared<SceneNode>();
 

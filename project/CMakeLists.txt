@@ -1,10 +1,19 @@
 ﻿cmake_minimum_required(VERSION 3.10)
 #project(OpenGLViewer)
 
+# automatically collect all source files in the directories
+file(GLOB CORE_SRC CONFIGURE_DEPENDS "core/*.cpp" "core/*.h")
+file(GLOB RENDER_SRC CONFIGURE_DEPENDS "render/*.cpp" "render/*.h")
+file(GLOB SHADERS_SRC CONFIGURE_DEPENDS "shaders/*.cpp" "shaders/*.h")
+
+
 add_executable(project
     main.cpp
-    ...
+    ${CORE_SRC}
+    ${RENDER_SRC}
+    ${SHADERS_SRC}
 )
+
 # Setze rekursive Quelle
 file(GLOB_RECURSE SOURCES
     core/*.cpp

@@ -86,7 +86,7 @@ int main() {
     auto rootNode = std::make_shared<SceneNode>();
 
     // Planet Node erstellen
-    auto planetModel = std::make_shared<Model>("assets/models/crystal_planet/crystal_planet.glb");
+    auto planetModel = std::make_shared<Model>("models/crystal_planet.glb");
     auto planetNode = std::make_shared<SceneNode>();
     planetNode->setModel(planetModel);
     planetNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));

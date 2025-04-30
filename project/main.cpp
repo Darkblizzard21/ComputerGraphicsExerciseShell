@@ -1,4 +1,4 @@
-﻿// OpenGL 3D Viewer - SceneNode + Planet
+﻿// OpenGL Scene: 3 Planets + Skybox + Rotation
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -6,26 +6,89 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
+#include <stb_image.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <iostream>
 #include <memory>
-
 #include "core/Camera.h"
 #include "render/Model.h"
 #include "render/Shader.h"
 #include "core/SceneNode.h"
 
-// Globale Settings
+unsigned int loadCubemap(const std::vector<std::string>& faces);
+unsigned int skyboxVAO = 0, skyboxVBO = 0;
+
+void drawSkyboxCube() {
+    if (skyboxVAO == 0) {
+        float skyboxVertices[] = {
+            -1.0f,  1.0f, -1.0f,
+            -1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+             1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
+
+            -1.0f, -1.0f,  1.0f,
+            -1.0f, -1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f,  1.0f,
+            -1.0f, -1.0f,  1.0f,
+
+             1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+
+            -1.0f, -1.0f,  1.0f,
+            -1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f, -1.0f,  1.0f,
+            -1.0f, -1.0f,  1.0f,
+
+            -1.0f,  1.0f, -1.0f,
+             1.0f,  1.0f, -1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+            -1.0f,  1.0f,  1.0f,
+            -1.0f,  1.0f, -1.0f,
+
+            -1.0f, -1.0f, -1.0f,
+            -1.0f, -1.0f,  1.0f,
+             1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+            -1.0f, -1.0f,  1.0f,
+             1.0f, -1.0f,  1.0f
+        };
+        glGenVertexArrays(1, &skyboxVAO);
+        glGenBuffers(1, &skyboxVBO);
+        glBindVertexArray(skyboxVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    }
+    glBindVertexArray(skyboxVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+}
+
+
+
+
+
+// Globals
 bool isWireframe = false;
 glm::vec3 lightDirection(0.0f, -1.0f, -1.0f);
 
-// Fenster-Callback
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+void framebuffer_size_callback(GLFWwindow* w, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-// ImGui Setup
 void setupImGui(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -33,8 +96,7 @@ void setupImGui(GLFWwindow* window) {
     ImGui_ImplOpenGL3_Init("#version 330 core");
 }
 
-// ImGui Rendering
-void renderImGui() {
+void renderImGui(Camera& camera) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -42,114 +104,138 @@ void renderImGui() {
     ImGui::Begin("Settings");
     ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightDirection), -1.0f, 1.0f);
     ImGui::Checkbox("Wireframe Mode", &isWireframe);
+    if (ImGui::Button("Reset Camera")) camera.reset();
     ImGui::End();
-
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-int main() {
-    // GLFW init
-    if (!glfwInit()) {
-        std::cerr << "GLFW init failed" << std::endl;
-        return -1;
+
+
+// loadCubemap implementation
+unsigned int loadCubemap(const std::vector<std::string>& faces) {
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    for (unsigned int i = 0; i < faces.size(); i++) {
+        unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+        if (data) {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB,
+                width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+            stbi_image_free(data);
+        }
+        else {
+            std::cerr << "Cubemap-Textur konnte nicht geladen werden: " << faces[i] << std::endl;
+            stbi_image_free(data);
+        }
     }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
+}
+
+
+
+
+int main() {
+    glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Planet Viewer", nullptr, nullptr);
-    if (!window) {
-        std::cerr << "Window creation failed" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "3-Planet Scene", nullptr, nullptr);
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
-    // GLAD init
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cerr << "GLAD init failed" << std::endl;
-        return -1;
-    }
+    gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
     glEnable(GL_DEPTH_TEST);
     setupImGui(window);
 
-    // Kamera
     Camera camera(window);
+    Shader modelShader("shaders/model.vert", "shaders/model.frag");
+    Shader skyboxShader("shaders/skybox.vert", "shaders/skybox.frag");
 
-    // Shader für Modelle
-    Shader modelShader("assets/model.vert", "assets/model.frag");
+    unsigned int skyboxTex = loadCubemap({
+		"assets/right.png", "assets/left.png",
+        "assets/top.png", "assets/bottom.png",
+        "assets/front.png", "assets/back.png"
+        });
 
-    // Root Scene Node
-    // Root Scene Node
+    // Load models
+    auto planet1 = std::make_shared<Model>("assets/planet1.glb");
+    auto planet2 = std::make_shared<Model>("assets/planet2.glb");
+    auto moon = std::make_shared<Model>("assets/moon.glb");
+
     auto rootNode = std::make_shared<SceneNode>();
 
-    // Planet Node erstellen
-    //auto planetModel = std::make_shared<Model>("assets/mars.glb");
-    //auto planetNode = std::make_shared<SceneNode>();
-    //planetNode->setModel(planetModel);
-    //planetNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
-    //planetNode->setRotationSpeed(20.0f); // Grad pro Sekunde
-    //rootNode->addChild(planetNode);
+    auto node1 = std::make_shared<SceneNode>();
+    node1->setModel(planet1);
+    node1->transform = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
+    rootNode->addChild(node1);
 
-    // Crystal Planet
-    auto crystalModel = std::make_shared<Model>("assets/crystal_planet.glb");
-    auto crystalNode = std::make_shared<SceneNode>();
-    crystalNode->setModel(crystalModel);
-    crystalNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 0.0f, 0.0f));
-    crystalNode->setRotationSpeed(20.0f);
-    rootNode->addChild(crystalNode);
+    auto orbitNode = std::make_shared<SceneNode>();
+    orbitNode->setRotationSpeed(10.0f); // rotates around planet1
+    rootNode->addChild(orbitNode);
 
-    // Mars Planet
-    auto marsModel = std::make_shared<Model>("assets/mars.glb");
-    auto marsNode = std::make_shared<SceneNode>();
-    marsNode->setModel(marsModel);
-    marsNode->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f)), glm::vec3(0.01f));
-    marsNode->setRotationSpeed(10.0f);
-    rootNode->addChild(marsNode);
+    auto node2 = std::make_shared<SceneNode>();
+    node2->setModel(planet2);
+    node2->transform = glm::translate(glm::mat4(1.0f), glm::vec3(3, 0, 0));
+    orbitNode->addChild(node2);
 
+    auto moonOrbit = std::make_shared<SceneNode>();
+    moonOrbit->setRotationSpeed(30.0f);
+    node2->addChild(moonOrbit);
 
-    // Timing für Animation
+    auto moonNode = std::make_shared<SceneNode>();
+    moonNode->setModel(moon);
+    moonNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(1, 0, 0));
+    moonOrbit->addChild(moonNode);
+
     float lastFrame = static_cast<float>(glfwGetTime());
 
-    // Render-Loop
     while (!glfwWindowShouldClose(window)) {
-        float currentFrame = static_cast<float>(glfwGetTime());
-        float deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
+        float current = static_cast<float>(glfwGetTime());
+        float delta = current - lastFrame;
+        lastFrame = current;
 
         glfwPollEvents();
         camera.update();
 
-        // Kamera-Matrizen
-        glm::mat4 view = camera.getViewMatrix();
-        glm::mat4 projection = camera.getProjectionMatrix(800.0f / 600.0f);
-
-        // Clear Frame
         glPolygonMode(GL_FRONT_AND_BACK, isWireframe ? GL_LINE : GL_FILL);
-        glClearColor(0.1f, 0.1f, 0.12f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Shader Setup
+        glm::mat4 view = camera.getViewMatrix();
+        glm::mat4 proj = camera.getProjectionMatrix(1280.0f / 720.0f);
+
         modelShader.use();
         modelShader.setVec3("lightDir", lightDirection);
         modelShader.setVec3("lightColor", glm::vec3(1.0f));
         modelShader.setVec3("viewPos", camera.getPosition());
         modelShader.setMat4("view", view);
-        modelShader.setMat4("projection", projection);
+        modelShader.setMat4("projection", proj);
 
-        // Update & Draw Scene
-        rootNode->update(deltaTime);
+        rootNode->update(delta);
         rootNode->draw(glm::mat4(1.0f), modelShader.ID);
 
-        // ImGui
-        renderImGui();
+        // Draw skybox
+        glDepthFunc(GL_LEQUAL);
+        skyboxShader.use();
+        skyboxShader.setMat4("view", glm::mat4(glm::mat3(view)));
+        skyboxShader.setMat4("projection", proj);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
+        // drawSkyboxCube(); → eigene Cube-VAO Funktion nötig
+        glDepthFunc(GL_LESS);
+
+        renderImGui(camera);
         glfwSwapBuffers(window);
     }
 
-    // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

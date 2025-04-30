@@ -105,6 +105,11 @@ void Model::loadModel(const std::string& path) {
                         normData[i * 3 + 2]
                     );
                 }
+            }   else {
+                // Fallback
+                for (auto& v : vertices) {
+                    v.Normal = glm::vec3(0.0f, 1.0f, 0.0f);
+                }
             }
 
             // TEXCOORD_0 (optional)

@@ -44,6 +44,7 @@ void renderImGui() {
     ImGui::Checkbox("Wireframe Mode", &isWireframe);
     ImGui::End();
 
+
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
@@ -86,12 +87,29 @@ int main() {
     auto rootNode = std::make_shared<SceneNode>();
 
     // Planet Node erstellen
-    auto planetModel = std::make_shared<Model>("assets/crystal_planet.glb");
-    auto planetNode = std::make_shared<SceneNode>();
-    planetNode->setModel(planetModel);
-    planetNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
-    planetNode->setRotationSpeed(20.0f); // Grad pro Sekunde
-    rootNode->addChild(planetNode);
+    //auto planetModel = std::make_shared<Model>("assets/mars.glb");
+    //auto planetNode = std::make_shared<SceneNode>();
+    //planetNode->setModel(planetModel);
+    //planetNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
+    //planetNode->setRotationSpeed(20.0f); // Grad pro Sekunde
+    //rootNode->addChild(planetNode);
+
+    // Crystal Planet
+    auto crystalModel = std::make_shared<Model>("assets/crystal_planet.glb");
+    auto crystalNode = std::make_shared<SceneNode>();
+    crystalNode->setModel(crystalModel);
+    crystalNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 0.0f, 0.0f));
+    crystalNode->setRotationSpeed(20.0f);
+    rootNode->addChild(crystalNode);
+
+    // Mars Planet
+    auto marsModel = std::make_shared<Model>("assets/mars.glb");
+    auto marsNode = std::make_shared<SceneNode>();
+    marsNode->setModel(marsModel);
+    marsNode->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f)), glm::vec3(0.01f));
+    marsNode->setRotationSpeed(10.0f);
+    rootNode->addChild(marsNode);
+
 
     // Timing für Animation
     float lastFrame = static_cast<float>(glfwGetTime());

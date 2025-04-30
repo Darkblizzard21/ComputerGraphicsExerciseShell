@@ -18,6 +18,16 @@ public:
      */
     void draw(unsigned int shaderProgram, const glm::mat4& modelMatrix);
 
+    size_t getMeshCount() const {
+        return meshes.size();
+    }
+
+    std::vector<unsigned int> getTextureIDs() const {
+        std::vector<unsigned int> ids;
+        for (auto& t : texturesLoaded) ids.push_back(t.id);
+        return ids;
+    }
+
 private:
     /// Represents a single vertex with position, normal, and texture coordinates
     struct Vertex {

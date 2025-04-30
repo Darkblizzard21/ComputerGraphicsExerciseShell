@@ -15,6 +15,8 @@
 #include "render/Model.h"
 #include "render/Shader.h"
 #include "core/SceneNode.h"
+#include <iostream> // test 
+#include <filesystem> //test
 
 unsigned int loadCubemap(const std::vector<std::string>& faces);
 unsigned int skyboxVAO = 0, skyboxVBO = 0;
@@ -142,9 +144,29 @@ unsigned int loadCubemap(const std::vector<std::string>& faces) {
 }
 
 
+// load Texture für skybox galaxy sphere
+unsigned int loadTexture(const char* path) {
+    unsigned int id;
+    glGenTextures(1, &id);
+    int w, h, c;
+    unsigned char* data = stbi_load(path, &w, &h, &c, 0);
+    GLenum format = (c == 4 ? GL_RGBA : GL_RGB);
+    glBindTexture(GL_TEXTURE_2D, id);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    // Wrap/Filter nach Wunsch
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    stbi_image_free(data);
+    return id;
+}
 
 
 int main() {
+    std::cout << "CWD: " << std::filesystem::current_path() << "\n";
+
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -198,6 +220,26 @@ int main() {
 
     float lastFrame = static_cast<float>(glfwGetTime());
 
+    // --- NEW: Galaxy Skybox Setup ---
+    Shader skyShader(
+        "../../../../project/shaders/sky.vert",   // 4× ".." von bin → project
+        "../../../../project/shaders/sky.frag"
+    );
+    Model skySphere(
+        "../../../../project/models/galaxy_skybox/inside_galaxy.glb"
+    );
+    unsigned int skyTex = loadTexture(
+        "../../../../project/models/galaxy_skybox/inside_galaxy.png"
+    );
+
+    // Prüfung ob Model korrekt geladen wird
+    std::cout << "Loaded meshes: " << skySphere.getMeshCount() << "\n";
+    auto texIDs = skySphere.getTextureIDs();
+    for (auto id : texIDs)
+        std::cout << "  Texture ID: " << id << "\n";
+
+    // --- END NEW: Galaxy Skybox Setup ---
+
     while (!glfwWindowShouldClose(window)) {
         float current = static_cast<float>(glfwGetTime());
         float delta = current - lastFrame;
@@ -213,6 +255,7 @@ int main() {
         glm::mat4 view = camera.getViewMatrix();
         glm::mat4 proj = camera.getProjectionMatrix(1280.0f / 720.0f);
 
+        // --- Szene rendern ---
         modelShader.use();
         modelShader.setVec3("lightDir", lightDirection);
         modelShader.setVec3("lightColor", glm::vec3(1.0f));
@@ -223,18 +266,28 @@ int main() {
         rootNode->update(delta);
         rootNode->draw(glm::mat4(1.0f), modelShader.ID);
 
-        // Draw skybox
-        glDepthFunc(GL_LEQUAL);
-        skyboxShader.use();
-        skyboxShader.setMat4("view", glm::mat4(glm::mat3(view)));
-        skyboxShader.setMat4("projection", proj);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
-        // drawSkyboxCube(); → eigene Cube-VAO Funktion nötig
-        glDepthFunc(GL_LESS);
+        // --- Galaxy Skybox Start ---
+        // NEW: Culling ausschalten, damit wir die Innenseiten der Kugel sehen
+        GLboolean wasCull = glIsEnabled(GL_CULL_FACE);
+        if (wasCull) glDisable(GL_CULL_FACE);
+
+        glDepthMask(GL_FALSE);                                         // NEW: keine Tiefen-Schreibungen
+        skyShader.use();                                               // NEW: unser Kugel-Skybox-Shader
+        skyShader.setMat4("view", glm::mat4(glm::mat3(view)));         // NEW: nur Rotation, keine Translation
+        skyShader.setMat4("projection", proj);                         // NEW: proj. Matrix setzen
+        glActiveTexture(GL_TEXTURE0);                                  // NEW: Textur-Unit aktivieren
+        glBindTexture(GL_TEXTURE_2D, skyTex);                          // NEW: Galaxy-Textur binden
+        skyShader.setInt("equirectangularMap", 0);                             // NEW: Uniform setzen
+        skySphere.draw(skyShader.ID, glm::mat4(1.0f));                 // NEW: Sphere-Model zeichnen
+        glDepthMask(GL_TRUE);      
+
+        if (wasCull) glEnable(GL_CULL_FACE);// NEW: Tiefen-Schreibungen wieder an
+        // --- Galaxy Skybox End ---
 
         renderImGui(camera);
         glfwSwapBuffers(window);
     }
+
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();

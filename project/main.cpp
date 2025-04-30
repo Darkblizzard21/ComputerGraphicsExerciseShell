@@ -79,14 +79,14 @@ int main() {
     Camera camera(window);
 
     // Shader für Modelle
-    Shader modelShader("shaders/model.vert", "shaders/model.frag");
+    Shader modelShader("assets/model.vert", "assets/model.frag");
 
     // Root Scene Node
     // Root Scene Node
     auto rootNode = std::make_shared<SceneNode>();
 
     // Planet Node erstellen
-    auto planetModel = std::make_shared<Model>("models/crystal_planet.glb");
+    auto planetModel = std::make_shared<Model>("assets/crystal_planet.glb");
     auto planetNode = std::make_shared<SceneNode>();
     planetNode->setModel(planetModel);
     planetNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));

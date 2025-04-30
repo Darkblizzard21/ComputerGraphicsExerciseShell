@@ -35,7 +35,32 @@ void Model::loadModel(const std::string& path) {
     tinygltf::TinyGLTF loader;
     std::string err, warn;
 
+    // Dummy-Loader für Bilder, damit eingebettete Texturen ignoriert werden können
+
+    // Add a custom LoadImageData callback to handle image loading  
+    loader.SetImageLoader([](tinygltf::Image* image, const int imageIndex, std::string* err,  
+                            std::string* warn, int req_width, int req_height,  
+                            const unsigned char* bytes, int size, void* user_data) -> bool {  
+       // Use stb_image to load the image data  
+       int width, height, channels;  
+       unsigned char* data = stbi_load_from_memory(bytes, size, &width, &height, &channels, 4);  
+       if (!data) {  
+           if (err) *err = "Failed to load image using stb_image.";  
+           return false;  
+       }  
+
+       image->width = width;  
+       image->height = height;  
+       image->component = 4;  
+       image->image.resize(width * height * 4);  
+       std::memcpy(image->image.data(), data, width * height * 4);  
+       stbi_image_free(data);  
+       return true;  
+    }, nullptr);  
+
     bool ret = loader.LoadBinaryFromFile(&gltfModel, &err, &warn, path);
+
+
     if (!warn.empty()) std::cout << "Warn: " << warn << std::endl;
     if (!err.empty()) std::cerr << "Err: " << err << std::endl;
     if (!ret) {

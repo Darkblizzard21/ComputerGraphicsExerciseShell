@@ -23,7 +23,8 @@ file(GLOB_RECURSE SOURCES
 # copy assets
 add_custom_command(TARGET project POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${CMAKE_SOURCE_DIR}/assets
+            ${CMAKE_SOURCE_DIR}/project/models
+            ${CMAKE_SOURCE_DIR}/project/shaders
             $<TARGET_FILE_DIR:project>/assets
 )
 

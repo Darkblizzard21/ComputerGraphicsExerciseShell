@@ -205,7 +205,7 @@ int main() {
             skyShader.setMat4("view", glm::mat4(glm::mat3(view)));
             skyShader.setMat4("projection", proj);
             glm::mat4 skyModel =                                    // Skybox skallieren
-                glm::scale(glm::mat4(1.0f), glm::vec3(1000.0f));
+                glm::scale(glm::mat4(1.0f), glm::vec3(2000.0f));
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, skyTex);
             skyShader.setInt("equirectangularMap", 0);

@@ -77,17 +77,17 @@ void Model::loadModel(const std::string& path) {
             const auto& posAccessor = gltfModel.accessors[primitive.attributes.at("POSITION")];
             const auto& posView = gltfModel.bufferViews[posAccessor.bufferView];
             const auto& posBuffer = gltfModel.buffers[posView.buffer];
-            const float* posData = reinterpret_cast<const float*>(
-                &posBuffer.data[posView.byteOffset + posAccessor.byteOffset]);
+
+            const unsigned char* posBase = posBuffer.data.data() + posView.byteOffset + posAccessor.byteOffset;
+
+            int posStride = posAccessor.ByteStride(posView);
+            if(posStride == 0) posStride = 12;
+
+            vertices.resize(posAccessor.count);
 
             for (size_t i = 0; i < posAccessor.count; ++i) {
-                Vertex v{};
-                v.Position = glm::vec3(
-                    posData[i * 3 + 0],
-                    posData[i * 3 + 1],
-                    posData[i * 3 + 2]
-                );
-                vertices.push_back(v);
+                const float* p = reinterpret_cast<const float*> (posBase + i * posStride);
+                vertices[i].Position = {p[0], p[1], p[2]};
             }
 
             // NORMAL (optional)
@@ -95,21 +95,19 @@ void Model::loadModel(const std::string& path) {
                 const auto& normAccessor = gltfModel.accessors[primitive.attributes.at("NORMAL")];
                 const auto& normView = gltfModel.bufferViews[normAccessor.bufferView];
                 const auto& normBuffer = gltfModel.buffers[normView.buffer];
-                const float* normData = reinterpret_cast<const float*>(
-                    &normBuffer.data[normView.byteOffset + normAccessor.byteOffset]);
 
-                for (size_t i = 0; i < normAccessor.count; ++i) {
-                    vertices[i].Normal = glm::vec3(
-                        normData[i * 3 + 0],
-                        normData[i * 3 + 1],
-                        normData[i * 3 + 2]
-                    );
+                int nStride = normAccessor.ByteStride(normView);
+
+                if(nStride==0) nStride=12;
+
+                const unsigned char* nBase= normBuffer.data.data() + normView.byteOffset + normAccessor.byteOffset;
+
+                for(size_t i = 0 ; i < normAccessor.count; ++i){
+                    const float* n = reinterpret_cast<const float*> (nBase + i * nStride);
+                    vertices[i].Normal = {n[0], n[1], n[2]};
                 }
-            }   else {
-                // Fallback
-                for (auto& v : vertices) {
-                    v.Normal = glm::vec3(0.0f, 1.0f, 0.0f);
-                }
+            } else { 
+                for (auto& v : vertices) v.Normal = {0,1,0};
             }
 
             // TEXCOORD_0 (optional)
@@ -117,14 +115,16 @@ void Model::loadModel(const std::string& path) {
                 const auto& uvAccessor = gltfModel.accessors[primitive.attributes.at("TEXCOORD_0")];
                 const auto& uvView = gltfModel.bufferViews[uvAccessor.bufferView];
                 const auto& uvBuffer = gltfModel.buffers[uvView.buffer];
-                const float* uvData = reinterpret_cast<const float*>(
-                    &uvBuffer.data[uvView.byteOffset + uvAccessor.byteOffset]);
+                
+                int uvStride = uvAccessor.ByteStride(uvView);
 
-                for (size_t i = 0; i < uvAccessor.count; ++i) {
-                    vertices[i].TexCoords = glm::vec2(
-                        uvData[i * 2 + 0],
-                        uvData[i * 2 + 1]
-                    );
+                if(uvStride == 0) uvStride = 8;
+
+                const unsigned char* uvBase= uvBuffer.data.data() + uvView.byteOffset + uvAccessor.byteOffset;
+
+                for(size_t i = 0; i < uvAccessor.count; ++i){
+                    const float* t = reinterpret_cast<const float*>(uvBase + i * uvStride);
+                    vertices[i].TexCoords={t[0],t[1]};
                 }
             }
 
@@ -132,46 +132,52 @@ void Model::loadModel(const std::string& path) {
             const auto& idxAccessor = gltfModel.accessors[primitive.indices];
             const auto& idxView = gltfModel.bufferViews[idxAccessor.bufferView];
             const auto& idxBuffer = gltfModel.buffers[idxView.buffer];
-            const unsigned short* idxData = reinterpret_cast<const unsigned short*>(
-                &idxBuffer.data[idxView.byteOffset + idxAccessor.byteOffset]);
 
-            for (size_t i = 0; i < idxAccessor.count; ++i) {
-                indices.push_back(static_cast<unsigned int>(idxData[i]));
+            const unsigned char* iBase = idxBuffer.data.data() + idxView.byteOffset + idxAccessor.byteOffset;
+
+            switch (idxAccessor.componentType) {
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                    for (size_t i = 0; i < idxAccessor.count; ++i) 
+                        indices.push_back(reinterpret_cast<const uint8_t*> (iBase)[i]);
+                    break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                    for (size_t i = 0; i < idxAccessor.count; ++i)
+                        indices.push_back(reinterpret_cast<const uint16_t*> (iBase)[i]);
+                    break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                    for (size_t i = 0; i < idxAccessor.count; ++i)
+                        indices.push_back(reinterpret_cast<const uint32_t*> (iBase)[i]);
+                    break;
             }
 
             std::vector<Texture> textures; // aktuell leer
 
             if (primitive.material >= 0) {
-                const auto& material = gltfModel.materials[primitive.material];
+                const auto& mat = gltfModel.materials[primitive.material];
+                int texIdx = mat.pbrMetallicRoughness.baseColorTexture.index;
 
-                if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {
-                    int texIndex = material.pbrMetallicRoughness.baseColorTexture.index;
-                    int imgIndex = gltfModel.textures[texIndex].source;
-                    const tinygltf::Image& image = gltfModel.images[imgIndex];
+                if (texIdx >= 0) {
+                    int imgIdx = gltfModel.textures[texIdx].source;
+                    const auto& img = gltfModel.images[imgIdx];
 
-                    GLuint texID;
-                    glGenTextures(1, &texID);
-                    glBindTexture(GL_TEXTURE_2D, texID);
-                    GLenum format = (image.component == 4) ? GL_RGBA : GL_RGB;
-                    glTexImage2D(GL_TEXTURE_2D, 0, format,
-                        image.width, image.height, 0,
-                        format, GL_UNSIGNED_BYTE,
-                        image.image.data());
+                    GLuint id; 
+                    glGenTextures(1, &id); 
+                    glBindTexture(GL_TEXTURE_2D, id);
+
+                    GLenum fmt = (img.component == 4) ? GL_RGBA : GL_RGB;
+
+                    glTexImage2D(GL_TEXTURE_2D,0,fmt,
+                                 img.width,img.height,0,fmt,GL_UNSIGNED_BYTE,
+                                 img.image.data());
                     glGenerateMipmap(GL_TEXTURE_2D);
+                    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+                    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+                    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-                    Texture tex;
-                    tex.id = texID;
-                    tex.type = "texture_diffuse";
-                    tex.path = image.uri;
-                    textures.push_back(tex);
+                    textures.push_back({id,"texture_diffuse",""});
                 }
             }
-
 
             meshes.emplace_back(vertices, indices, textures);
         }

@@ -115,10 +115,10 @@ int main() {
         "../../../../project/shaders/model.vert",
         "../../../../project/shaders/model.frag"
     );
-    //Shader skyboxShader(
-    //    "../../../../project/shaders/skybox.vert",
-    //    "../../../../project/shaders/skybox.frag"
-    //);
+    Shader sunShader(
+        "../../../../project/shaders/sun.vert",
+        "../../../../project/shaders/sun.frag"
+    );
 
     // 6) Modelle laden und SceneGraph aufbauen
     auto alienPlanet = std::make_shared<Model>("../../../../project/models/planets/alien_planet.glb");

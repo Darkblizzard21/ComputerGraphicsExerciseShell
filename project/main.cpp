@@ -16,7 +16,8 @@
 #include "core/CameraNode.h"
 
 // Globals
-bool isWireframe = false;
+bool isWireframe = false; // Wireframmodus an/aus
+bool showSkybox = true; // skybox an/aus
 glm::vec3 lightDirection(0.0f, -1.0f, -1.0f);
 
 void framebuffer_size_callback(GLFWwindow* w, int width, int height) {
@@ -28,6 +29,7 @@ void setupImGui(GLFWwindow* window) {
     ImGui::CreateContext();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330 core");
+    
 }
 
 void renderImGui(Camera& camera) {
@@ -38,6 +40,7 @@ void renderImGui(Camera& camera) {
     ImGui::Begin("Settings");
     ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightDirection), -1.0f, 1.0f);
     ImGui::Checkbox("Wireframe Mode", &isWireframe);
+    ImGui::Checkbox("Show Skybox", &showSkybox);
     if (ImGui::Button("Reset Camera")) camera.reset();
     ImGui::End();
 
@@ -194,21 +197,23 @@ int main() {
         rootNode->draw(glm::mat4(1.0f), modelShader.ID);
 
         // 7) Skybox rendern
-        GLboolean wasCull = glIsEnabled(GL_CULL_FACE);
-        glDisable(GL_CULL_FACE);
-        glDepthMask(GL_FALSE);
-        skyShader.use();
-        skyShader.setMat4("view", glm::mat4(glm::mat3(view)));
-        skyShader.setMat4("projection", proj);
-        glm::mat4 skyModel =                                    // Skybox skallieren
-            glm::scale(glm::mat4(1.0f), glm::vec3(1000.0f));
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, skyTex);
-        skyShader.setInt("equirectangularMap", 0);
-        //skySphere.draw(skyShader.ID, glm::mat4(1.0f));
-        skySphere.draw(skyShader.ID, skyModel);
-        glDepthMask(GL_TRUE);
-        if (wasCull) glEnable(GL_CULL_FACE);
+        if (showSkybox) {
+            GLboolean wasCull = glIsEnabled(GL_CULL_FACE);
+            glDisable(GL_CULL_FACE);
+            glDepthMask(GL_FALSE);
+            skyShader.use();
+            skyShader.setMat4("view", glm::mat4(glm::mat3(view)));
+            skyShader.setMat4("projection", proj);
+            glm::mat4 skyModel =                                    // Skybox skallieren
+                glm::scale(glm::mat4(1.0f), glm::vec3(1000.0f));
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, skyTex);
+            skyShader.setInt("equirectangularMap", 0);
+            //skySphere.draw(skyShader.ID, glm::mat4(1.0f));
+            skySphere.draw(skyShader.ID, skyModel);
+            glDepthMask(GL_TRUE);
+            if (wasCull) glEnable(GL_CULL_FACE);
+        }
 
         // 8) ImGui zeichnen (mit Camera aus dem Graph)
         renderImGui(cameraNode->getCamera());

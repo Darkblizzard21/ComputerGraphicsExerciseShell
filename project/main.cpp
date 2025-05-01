@@ -107,7 +107,7 @@ int main() {
     auto rootNode = std::make_shared<SceneNode>();  
     auto cameraNode = std::make_shared<CameraNode>(window); 
     cameraNode->transform =
-        glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 30));
+        glm::translate(glm::mat4(1.0f), glm::vec3(500.0f, 30, 50.0f));
     rootNode->addChild(cameraNode);                    
 
 
@@ -185,6 +185,7 @@ int main() {
 
         // 6) Modelle rendern
         modelShader.use();
+        modelShader.setInt("texture_diffuse", 0);
         modelShader.setVec3("lightDir", lightDirection);
         modelShader.setVec3("lightColor", glm::vec3(1.0f));
         modelShader.setVec3("viewPos", cameraNode->getCamera().getPosition());
@@ -200,7 +201,7 @@ int main() {
         skyShader.setMat4("view", glm::mat4(glm::mat3(view)));
         skyShader.setMat4("projection", proj);
         glm::mat4 skyModel =                                    // Skybox skallieren
-            glm::scale(glm::mat4(1.0f), glm::vec3(500.0f));
+            glm::scale(glm::mat4(1.0f), glm::vec3(1000.0f));
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, skyTex);
         skyShader.setInt("equirectangularMap", 0);

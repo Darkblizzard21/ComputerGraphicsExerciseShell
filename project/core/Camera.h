@@ -15,6 +15,14 @@ public:
     void reset();
     glm::vec3 getPosition() const; // aktuelle Welt-position
 
+    public:  
+       glm::vec3& getTarget() {  
+           return target;  
+       }
+       void moveTarget(const glm::vec3& offset) {
+           target += offset;
+       }
+
 private:
     GLFWwindow* window;
 

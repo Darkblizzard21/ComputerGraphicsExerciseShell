@@ -16,12 +16,40 @@
 #include "core/CameraNode.h"
 
 // Globals
-bool isWireframe = false; // Wireframmodus an/aus
-bool showSkybox = true; // skybox an/aus
+bool isWireframe = false; 
+bool showSkybox = true; 
 glm::vec3 lightDirection(0.0f, -1.0f, -1.0f);
+float cameraSpeed = 100.0f;
 
 void framebuffer_size_callback(GLFWwindow* w, int width, int height) {
     glViewport(0, 0, width, height);
+}
+
+
+
+void processInput(GLFWwindow* window, Camera& camera, float deltaTime) {
+    glm::vec3 forward = glm::normalize(camera.getTarget() - camera.getPosition());
+    glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
+    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 movement(0.0f);
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        movement += forward;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        movement -= forward;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        movement -= right;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        movement += right;
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+        movement += up;
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+        movement -= up;
+
+    if (glm::length(movement) > 0.0f) {
+        movement = glm::normalize(movement) * deltaTime * cameraSpeed;
+        camera.moveTarget(movement);
+    }
 }
 
 void setupImGui(GLFWwindow* window) {
@@ -43,7 +71,6 @@ void renderImGui(Camera& camera) {
     ImGui::Checkbox("Show Skybox", &showSkybox);
     if (ImGui::Button("Reset Camera")) camera.reset();
     ImGui::End();
-
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
@@ -58,7 +85,6 @@ unsigned int loadTexture(const char* path) {
     glBindTexture(GL_TEXTURE_2D, id);
     glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
-    // Wrap/Filter nach Wunsch
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -77,7 +103,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "3-Planet Scene", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "Solar System", nullptr, nullptr);
     if (!window) {
         std::cerr << "Window creation failed\n";
         glfwTerminate();
@@ -110,7 +136,7 @@ int main() {
     auto rootNode = std::make_shared<SceneNode>();  
     auto cameraNode = std::make_shared<CameraNode>(window); 
     cameraNode->transform =
-        glm::translate(glm::mat4(1.0f), glm::vec3(500.0f, 30, 50.0f));
+        glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 100.0f, 300.0f));
     rootNode->addChild(cameraNode);                    
 
 
@@ -125,32 +151,33 @@ int main() {
 
     // 6) Modelle laden und SceneGraph aufbauen
     auto alienPlanet = std::make_shared<Model>("../../../../project/models/planets/alien_planet.glb");
-    auto purplePlanet = std::make_shared<Model>("../../../../project/models/planets/purple_planet.glb");
+    auto sunPlanet = std::make_shared<Model>("../../../../project/models/planets/sun.glb");
     auto shinyPlanet = std::make_shared<Model>("../../../../project/models/planets/shiny_planet.glb");
 
+    auto sunNode = std::make_shared<SceneNode>();
+    sunNode->setModel(sunPlanet);
+    sunNode->transform = glm::scale(glm::mat4(1.0f), glm::vec3(20.0f));
+    sunNode->setRotationSpeed(10.0f);
+    rootNode->addChild(sunNode);
+
     // Alien Planet Node
-    auto alienNode = std::make_shared<SceneNode>();
-    alienNode->setModel(alienPlanet);
-    alienNode->transform =
-        glm::translate(glm::mat4(1.0f), glm::vec3(-8.0f, 0.0f, -12.0f))
-        * glm::scale(glm::mat4(1.0f), glm::vec3(1.2f));
-    rootNode->addChild(alienNode);
+    auto orbit1 = std::make_shared<SceneNode>();
+    orbit1->setRotationSpeed(5.0f);
+    auto planet1 = std::make_shared<SceneNode>();
+    planet1->setModel(alienPlanet);
+    planet1->transform = glm::translate(glm::mat4(1.0f), glm::vec3(80, 0, 0)) * glm::scale(glm::mat4(1.0f), glm::vec3(6));
+    orbit1->addChild(planet1);
+    rootNode->addChild(orbit1);
 
     // Purple Planet Node
-    auto purpleNode = std::make_shared<SceneNode>();
-    purpleNode->setModel(purplePlanet);
-    purpleNode->transform =
-        glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -15.0f))
-        * glm::scale(glm::mat4(1.0f), glm::vec3(0.8f));
-    rootNode->addChild(purpleNode);
+    auto orbit2 = std::make_shared<SceneNode>();
+    orbit2->setRotationSpeed(2.5f);
+    auto planet2 = std::make_shared<SceneNode>();
+    planet2->setModel(shinyPlanet);
+    planet2->transform = glm::translate(glm::mat4(1.0f), glm::vec3(-130, 0, 0)) * glm::scale(glm::mat4(1.0f), glm::vec3(7));
+    orbit2->addChild(planet2);
+    rootNode->addChild(orbit2);
 
-    // Shiny Planet Node
-    auto shinyNode = std::make_shared<SceneNode>();
-    shinyNode->setModel(shinyPlanet);
-    shinyNode->transform =
-        glm::translate(glm::mat4(1.0f), glm::vec3(8.0f, 0.0f, -12.0f))
-        * glm::scale(glm::mat4(1.0f), glm::vec3(1.0f));
-    rootNode->addChild(shinyNode);
 
     float lastFrame = static_cast<float>(glfwGetTime());
 
@@ -186,17 +213,9 @@ int main() {
         glm::mat4 view = cameraNode->getCamera().getViewMatrix();
         glm::mat4 proj = cameraNode->getCamera().getProjectionMatrix(1280.0f / 720.0f);
 
-        // 6) Modelle rendern
-        modelShader.use();
-        modelShader.setInt("texture_diffuse", 0);
-        modelShader.setVec3("lightDir", lightDirection);
-        modelShader.setVec3("lightColor", glm::vec3(1.0f));
-        modelShader.setVec3("viewPos", cameraNode->getCamera().getPosition());
-        modelShader.setMat4("view", view);
-        modelShader.setMat4("projection", proj);
-        rootNode->draw(glm::mat4(1.0f), modelShader.ID);
 
-        // 7) Skybox rendern
+
+        // 6) Skybox rendern
         if (showSkybox) {
             GLboolean wasCull = glIsEnabled(GL_CULL_FACE);
             glDisable(GL_CULL_FACE);
@@ -214,6 +233,18 @@ int main() {
             glDepthMask(GL_TRUE);
             if (wasCull) glEnable(GL_CULL_FACE);
         }
+
+        glm::vec3 lightPos = glm::vec3(0);
+        
+        // 7) Modelle rendern
+        modelShader.use();
+        modelShader.setInt("texture_diffuse", 0);
+        modelShader.setVec3("lightDir", lightDirection);
+        modelShader.setVec3("lightColor", glm::vec3(1.0f));
+        modelShader.setVec3("viewPos", cameraNode->getCamera().getPosition());
+        modelShader.setMat4("view", view);
+        modelShader.setMat4("projection", proj);
+        rootNode->draw(glm::mat4(1.0f), modelShader.ID);
 
         // 8) ImGui zeichnen (mit Camera aus dem Graph)
         renderImGui(cameraNode->getCamera());

@@ -22,6 +22,10 @@ public:
        void moveTarget(const glm::vec3& offset) {
            target += offset;
        }
+       void move(const glm::vec3& offset) {
+           target += offset;
+       }
+
 
 private:
     GLFWwindow* window;

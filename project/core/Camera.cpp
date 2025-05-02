@@ -39,8 +39,9 @@ glm::mat4 Camera::getViewMatrix() const {
     return glm::lookAt(camPos, target, up);
 }
 
+
 glm::mat4 Camera::getProjectionMatrix(float aspectRatio) const {
-    return glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+    return glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 5000.0f);
 }
 
 void Camera::processMouseInput() {

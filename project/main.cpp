@@ -18,6 +18,7 @@
 // Globals
 bool isWireframe = false; 
 bool showSkybox = true; 
+bool enableDirectionalLight = true;
 glm::vec3 lightDirection(0.0f, -1.0f, -1.0f);
 float cameraSpeed = 100.0f;
 
@@ -69,6 +70,7 @@ void renderImGui(Camera& camera) {
     ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightDirection), -1.0f, 1.0f);
     ImGui::Checkbox("Wireframe Mode", &isWireframe);
     ImGui::Checkbox("Show Skybox", &showSkybox);
+    ImGui::Checkbox("Directional Light", &enableDirectionalLight);
     if (ImGui::Button("Reset Camera")) camera.reset();
     ImGui::End();
     ImGui::Render();
@@ -156,7 +158,8 @@ int main() {
 
     auto sunNode = std::make_shared<SceneNode>();
     sunNode->setModel(sunPlanet);
-    sunNode->transform = glm::scale(glm::mat4(1.0f), glm::vec3(20.0f));
+    sunNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0)) * glm::scale(glm::mat4(1.0f), glm::vec3(0.05f));
+
     sunNode->setRotationSpeed(10.0f);
     rootNode->addChild(sunNode);
 
@@ -165,6 +168,7 @@ int main() {
     orbit1->setRotationSpeed(5.0f);
     auto planet1 = std::make_shared<SceneNode>();
     planet1->setModel(alienPlanet);
+	planet1->setRotationSpeed(10.0f);
     planet1->transform = glm::translate(glm::mat4(1.0f), glm::vec3(80, 0, 0)) * glm::scale(glm::mat4(1.0f), glm::vec3(6));
     orbit1->addChild(planet1);
     rootNode->addChild(orbit1);
@@ -174,7 +178,8 @@ int main() {
     orbit2->setRotationSpeed(2.5f);
     auto planet2 = std::make_shared<SceneNode>();
     planet2->setModel(shinyPlanet);
-    planet2->transform = glm::translate(glm::mat4(1.0f), glm::vec3(-130, 0, 0)) * glm::scale(glm::mat4(1.0f), glm::vec3(7));
+	planet2->setRotationSpeed(10.0f);
+    planet2->transform = glm::translate(glm::mat4(1.0f), glm::vec3(-130, 0, 50)) * glm::scale(glm::mat4(1.0f), glm::vec3(0.1));
     orbit2->addChild(planet2);
     rootNode->addChild(orbit2);
 
@@ -239,18 +244,46 @@ int main() {
         // 7) Modelle rendern
         modelShader.use();
         modelShader.setInt("texture_diffuse", 0);
-        modelShader.setVec3("lightDir", lightDirection);
+        modelShader.setVec3("lightDir", enableDirectionalLight ? lightDirection : glm::vec3(0.0f));
         modelShader.setVec3("lightColor", glm::vec3(1.0f));
         modelShader.setVec3("viewPos", cameraNode->getCamera().getPosition());
         modelShader.setMat4("view", view);
         modelShader.setMat4("projection", proj);
         rootNode->draw(glm::mat4(1.0f), modelShader.ID);
 
+        // 7) Modelle rendern
+
+        //// Planeten mit modelShader rendern
+        //modelShader.use();
+        //modelShader.setVec3("lightDir", lightDirection);
+        //modelShader.setVec3("lightPos", glm::vec3(0.0f)); // z. B. Sonnenzentrum
+        //modelShader.setVec3("lightColor", glm::vec3(1.0f));
+        //modelShader.setVec3("viewPos", cameraNode->getCamera().getPosition());
+        //modelShader.setBool("isDirectional", enableDirectionalLight); // UI gesteuert
+
+
+        //// Da die Sonne separat gerendert wird, entfernen wir sie temporär aus dem rootNode
+        //rootNode->removeChild(sunNode);
+        //rootNode->draw(glm::mat4(1.0f), modelShader.ID);
+        //rootNode->addChild(sunNode); // Sonne wieder hinzufügen
+
+        //// Sonne mit sunShader rendern
+        //sunShader.use();
+        //sunShader.setVec3("lightPos", glm::vec3(0.0f));  // Zentrum
+        //sunShader.setVec3("camPos", cameraNode->getCamera().getPosition());
+        //sunShader.setVec3("lightColor", glm::vec3(1.0f));
+        //sunShader.setMat4("view", view);
+        //sunShader.setMat4("projection", proj);
+        //sunNode->draw(glm::mat4(1.0f), sunShader.ID);
+
         // 8) ImGui zeichnen (mit Camera aus dem Graph)
         renderImGui(cameraNode->getCamera());
 
         // 9) Buffer swap
         glfwSwapBuffers(window);
+
+        processInput(window, cameraNode->getCamera(), delta);
+
     }
 
     // 10) Cleanup

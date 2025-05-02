@@ -14,7 +14,7 @@ public:
 
     void setModel(std::shared_ptr<Model> model);
     void addChild(std::shared_ptr<SceneNode> child);
-
+    void removeChild(std::shared_ptr<SceneNode> child);
     // Setter und Getter für Rotationsgeschwindigkeit
     void setRotationSpeed(float speed);
     float getRotationSpeed() const;

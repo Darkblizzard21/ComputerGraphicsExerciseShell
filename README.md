@@ -1,66 +1,44 @@
-# ComputerGraphics Exercise Project
-## Required Software
+Fragen: 
+Cube Map Skybox notwendig oder Skysphere auch ok?
+Wie viel noch wegen Kamera Modes?
 
-- [CMake](https://cmake.org/)
-- [Visual Studio (Windows)](https://visualstudio.microsoft.com/de/vs/community/)
+Uebersicht Punkte:
+vermutlich 50pkt Mindestanforderung
+- 5 Punkte: Skybox
+- 5 Punkte: Point Lights
+- 5 Punkte: Raytracing Spheres
+- 5 Punkte: Camera Modes (teilweise implementiert)
+- 5 Punkte: Animation Nodes (teilweise implementiert), Oszillierende Translation fehlt
+- 5 Punkte: Alpha Mask oder Normal Map
+- 20 Punkte: Shadows
 
-## how to install
-1. Download zip and unzip it
-2. configure the project using cmake GUI or CLI <br>
-    `cmake -B ./build`
-3. (if it fails on linux you might need to install a view development packages)
-4. Build cmake project using Visual Studio or CLI <br>
-    `cmake --build ./build --config Debug`
+Todo:
+7.2.1 Raytracing Spheres (5P)
+Implementieren Sie einen Raytracer zur Darstellung von Kugeln. Berechnen Sie Schnittpunkte entweder in einem FragmentShader oder ComputeShader. Die Schattierung der Kugeln sollte der Qualitaet der Beleuchtung der rasterierten Objekte entsprechen.
 
-program was tested on Windows (and in a previous Version on Linux). If you encounter any difficulties contact the lectuerer.
+7.3.1 Camera Modes (5P) 
+Implementieren Sie verschiedene weitere Kameramodi, wie eine 6Degrees-of-Freedom-Camera (Horizontale, Vertikale, Laterale Bewegung, sowie Roll, Pitch und Yaw), um die Navigation innerhalb der Szene zu verbessern. Fuegen Sie zudem Optionen hinzu, das FieldOfView und die Far- und Near-Clipping Plane im GUI einzustellen.
 
-## linux setup guide:
+7.3.2 Animation Nodes (5P)
+Fuegen Sie verschiedene Animation Nodes hinzu, um die Szene zu bewegen:
+- Stetige Rotation um eine Achse
+- Oszillierende Rotation um eine Achse
+- Oszillierende Translation entlang einer Achse
 
-1. install cmake<br>
-  `sudo apt update`<br>
-  `sudo apt install cmake pkg-config`
-1. install build essential:<br>
-  `sudo apt-get update && sudo apt-get install build-essential`
-1. install git:<br>
-  `sudo apt-get install git-all`
-1. install opengl requirements:<br>
-  `sudo apt-get install mesa-utils libglu1-mesa-dev freeglut3-dev mesa-common-dev`<br>
-  `sudo apt-get install libglew-dev libglfw3-dev libglm-dev`<br>
-  `sudo apt-get install libao-dev libmpg123-dev`
-1. install wayland (on Ubuntu [on other distributions you may need something else](https://www.glfw.org/docs/3.3/compile.html)):<br>
-  `sudo apt install libwayland-dev libxkbcommon-dev wayland-protocols extra-cmake-modules`
-1. configure cmake:<br>
-  `cmake -B build`
-1. build cmake:<br>
-  `cmake --build ./build --config Debug` or `cmake --build ./build --config Debug --target compatibilityCheck`
+7.4.1 Spline Renderer (15P)
+Implementieren Sie ein Rendering-System fuer Splines, um gekruemmte Linien und Pfade praezise darzustellen. Nutzen Sie mathematische Interpolationstechniken fuer eine exakte Visualisierung.
 
-if you want to use X11 instead of Wayland you need to change the [CmakeLists.txt in the imported folder](./imported/CMakeLists.txt):
+7.4.2 Spline UI (10P)
+Erstellen Sie eine interaktive Benutzeroberflaeche zur Steuerung von Splines. Ermoeglichen Sie Nutzern das Erstellen, Bearbeiten und Anpassen von Kurven innerhalb der Szene. Die erstellten Splines sollten speicherbar sein und wieder geladen werden koennen.
 
-set(GLFW_BUILD_X11 OFF)<br>
-set(GLFW_BUILD_WAYLAND OFF)
+8.5 Shadows (20P)
+Implementieren Sie ShadowMapping fuer ihre globale Lichtquelle und/oder Punktlichter.
+Guides und Ressourcen:
+- Learn OpenGL
+- Shadow Mapping - Tutorial
 
-to
+7.1.1 Normal Map (5P)
+Implementieren Sie Normal Mapping, um detaillierte Oberflaechenstrukturen ohne zusaetzliche Geometrie darzustellen. Nutzen Sie diese Technik, um realistischere Materialeffekte durch verbesserte Beleuchtung zu erzeugen.
 
-set(GLFW_BUILD_X11 ON)<br>
-set(GLFW_BUILD_WAYLAND OFF)
-
-or
-
-set(GLFW_BUILD_X11 OFF)<br>
-set(GLFW_BUILD_WAYLAND OFF)
-
-## Apple Notes
-### Apple Silicon
-I could not test Apple/Mac beforehand, so tweaking still needs to be done.
-There a different methods to get the program running, but all require a bit of CMake knowledge.
-- [mesa3d](https://www.mesa3d.org/)
-- [MLG (OpenGL 4.6 on Metal)](https://github.com/openglonmetal/MGL)
-
-If getting openGL with compute Shaders (4.3) to run on Mac OS and alternative options for Mac users are not given, i will cut compute shaders from the Topics.
-And i will downgrade the sample project to 3.3. which should run all Macs (no guarantees).
-
-### Non-Apple Silicon
-The safest route is a linux or windows dual boot. Alternatively the Apple Silicon methods can be tried.
-
-### Why OpenGL if Mac dose not support if fully?
-Linux and Windows support it. And the only cross platform option is Vulkan which is out of scope for an entry level Computer Graphics course.
+7.1.2 Alpha Mask (5P)
+Ermoeglichen Sie Alpha Masking, um Teile einer Textur nicht darzustellen. Nutzen Sie diese Technik fuer Objekte wie Blaetter, Buesche oder Baeume. Es ist ausreichend, Alpha Clipping einzubauen.
